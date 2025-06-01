@@ -1,0 +1,26 @@
+server {
+    listen 80;
+    server_name {{DOMAIN}} www.{{DOMAIN}};
+    root /var/www/{{DOMAIN}}/public;
+
+    index index.php index.html index.htm;
+
+    location / {
+        try_files $uri $uri/ /index.php?$query_string;
+    }
+
+    location ~ \.php$ {
+        fastcgi_pass unix:/run/php/php{{PHP_VERSION}}-fpm-{{DOMAIN}}.sock;
+        fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+        include fastcgi_params;
+        fastcgi_hide_header X-Powered-By;
+    }
+
+    location ~ /\.ht {
+        deny all;
+    }
+
+    # Logging
+    access_log /var/log/sites/{{DOMAIN}}/nginx-access.log;
+    error_log /var/log/sites/{{DOMAIN}}/nginx-error.log;
+}
