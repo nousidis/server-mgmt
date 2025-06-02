@@ -540,9 +540,6 @@ chmod +x /usr/local/bin/root-setup.sh
 # ===========================================
 echo -e "${GREEN}Running final setup...${NC}"
 
-# Run root setup
-/usr/local/bin/root-setup.sh
-
 # Create initial log entry
 echo "[$(date '+%Y-%m-%d %H:%M:%S')] VPS Manager security installed by root" > /var/log/vps-manager/vps-manager.log
 
@@ -602,9 +599,6 @@ echo ""
 echo "Next steps:"
 echo "1. Log out and log back in as $ADMIN_USER"
 echo "2. Change your password: passwd"
-echo "3. Run system setup: sudo /usr/local/bin/setup/00-initial-setup.sh"
-echo "4. Install dependencies: sudo /usr/local/bin/setup/01-install-dependencies.sh"
-echo "5. Create directory structure: sudo /usr/local/bin/setup/02-directory-structure.sh"
 echo ""
 echo "Then install your stack components as needed:"
 echo "- PHP: sudo /usr/local/bin/php/install-php-versions.sh"
