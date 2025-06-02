@@ -453,13 +453,9 @@ VPSMANAGER
 chmod +x /usr/local/bin/vps-manager
 
 # ===========================================
-# CREATE SECURITY AUDIT SCRIPT
+# SERVER SECURITY AUDIT
 # ===========================================
-echo -e "${GREEN}Creating security audit script...${NC}"
-
-cat > /usr/local/bin/utils/security-audit.sh << 'SECAUDIT'
-#!/bin/bash
-# security-audit.sh - Run periodic security checks
+echo -e "${GREEN}Running security audit...${NC}"
 
 echo "=== VPS Security Audit ==="
 echo "Date: $(date)"
@@ -504,12 +500,9 @@ SECAUDIT
 chmod +x /usr/local/bin/utils/security-audit.sh
 
 # ===========================================
-# CREATE ROOT SETUP SCRIPT
+# CREATE ROOT SETUP
 # ===========================================
-echo -e "${GREEN}Creating root setup script...${NC}"
-
-cat > /usr/local/bin/root-setup.sh << 'ROOTSETUP'
-#!/bin/bash
+echo -e "${GREEN}Running root setup...${NC}"
 
 # This script runs the initial setup as root
 # It's called automatically by the installer
@@ -531,9 +524,6 @@ touch /var/log/vps-manager/vps-manager.log
 chmod 666 /var/log/vps-manager/vps-manager.log
 
 echo "Root setup completed"
-ROOTSETUP
-
-chmod +x /usr/local/bin/root-setup.sh
 
 # ===========================================
 # FINAL SETUP
