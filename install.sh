@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# VPS Manager All-in-One Installer
-# This script installs the complete VPS management system with security configurations
+# VPS Manager Security Installation Script
+# This script sets up security configurations and management user
 
 set -e
 
@@ -12,90 +12,36 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m'
 
-# Configuration
-INSTALL_DIR="/usr/local/bin"
-CONFIG_DIR="/etc/vps-manager"
-LOG_DIR="/var/log/vps-manager"
-SCRIPT_SOURCE_DIR="./vps-scripts"  # Directory where you extracted the scripts
-
 # Check if running as root
 if [ "$EUID" -ne 0 ]; then 
     echo -e "${RED}Please run as root${NC}"
     exit 1
 fi
 
-echo -e "${BLUE}=== VPS Manager All-in-One Installer ===${NC}"
-echo ""
+echo -e "${BLUE}=== VPS Manager Security Installation ===${NC}"
 
-# Get installation parameters
-read -p "Enter timezone (e.g., UTC, America/New_York) [UTC]: " TIMEZONE
-TIMEZONE=${TIMEZONE:-UTC}
+# Copy all scripts to proper location
+echo -e "${GREEN}Copying scripts to /usr/local/bin...${NC}"
+cp -r ../* /usr/local/bin/
+chmod -R +x /usr/local/bin/
 
+# Get configuration
 read -p "Enter admin username [vpsadmin]: " ADMIN_USER
 ADMIN_USER=${ADMIN_USER:-vpsadmin}
 
-read -p "Enter your email for SSL certificates: " ADMIN_EMAIL
-while [[ ! "$ADMIN_EMAIL" =~ ^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$ ]]; do
-    echo -e "${RED}Invalid email format${NC}"
-    read -p "Enter your email for SSL certificates: " ADMIN_EMAIL
-done
+read -p "Enter timezone [UTC]: " TIMEZONE
+TIMEZONE=${TIMEZONE:-UTC}
 
-read -sp "Enter MySQL root password: " MYSQL_ROOT_PASSWORD
-echo ""
-read -sp "Confirm MySQL root password: " MYSQL_ROOT_PASSWORD_CONFIRM
-echo ""
-
-while [ "$MYSQL_ROOT_PASSWORD" != "$MYSQL_ROOT_PASSWORD_CONFIRM" ]; do
-    echo -e "${RED}Passwords don't match${NC}"
-    read -sp "Enter MySQL root password: " MYSQL_ROOT_PASSWORD
-    echo ""
-    read -sp "Confirm MySQL root password: " MYSQL_ROOT_PASSWORD_CONFIRM
-    echo ""
-done
-
-read -sp "Enter PostgreSQL password: " POSTGRES_PASSWORD
-echo ""
-
-echo ""
-echo -e "${YELLOW}Installation will begin with these settings:${NC}"
-echo "Timezone: $TIMEZONE"
-echo "Admin user: $ADMIN_USER"
-echo "Admin email: $ADMIN_EMAIL"
-echo ""
-read -p "Continue? (yes/no): " CONFIRM
-
-if [ "$CONFIRM" != "yes" ]; then
-    echo "Installation cancelled"
-    exit 1
-fi
-
-# Function to create all scripts
-create_scripts() {
-    echo -e "${GREEN}Creating VPS management scripts...${NC}"
-    
-    # Create directory structure
-    mkdir -p $INSTALL_DIR/{setup,php,node,database,nginx/templates,sites,utils,config/templates}
-    mkdir -p $CONFIG_DIR/configs
-    mkdir -p $LOG_DIR
-    
-    # Create all setup scripts
-    cat > $INSTALL_DIR/setup/00-initial-setup.sh << 'SETUP00'
-#!/bin/bash
-
-# Colors for output
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-NC='\033[0m'
-
-echo -e "${GREEN}Starting VPS Initial Setup...${NC}"
+# ===========================================
+# INITIAL SECURITY SETUP
+# ===========================================
+echo -e "${GREEN}Running initial security setup...${NC}"
 
 # Update system packages
 echo -e "${YELLOW}Updating system packages...${NC}"
 apt-get update && apt-get upgrade -y
 
 # Set timezone
-TIMEZONE=${1:-"UTC"}
 echo -e "${YELLOW}Setting timezone to $TIMEZONE...${NC}"
 timedatectl set-timezone $TIMEZONE
 
@@ -107,94 +53,108 @@ ufw allow 80/tcp
 ufw allow 443/tcp
 ufw reload
 
-echo -e "${GREEN}Initial setup completed!${NC}"
-SETUP00
+# Create management user
+ADMIN_PASSWORD=$(openssl rand -base64 32)
+echo -e "${YELLOW}Creating management user: $ADMIN_USER...${NC}"
 
-    cat > $INSTALL_DIR/setup/01-install-dependencies.sh << 'SETUP01'
-#!/bin/bash
-
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-NC='\033[0m'
-
-echo -e "${GREEN}Installing system dependencies...${NC}"
-
-# Install build essentials
-apt-get install -y build-essential software-properties-common
-
-# Install common tools
-apt-get install -y \
-    curl \
-    wget \
-    git \
-    vim \
-    htop \
-    zip \
-    unzip \
-    ncdu \
-    tree \
-    jq
-
-# Install supervisor
-apt-get install -y supervisor
-systemctl enable supervisor
-systemctl start supervisor
-
-# Install certbot
-apt-get install -y certbot python3-certbot-nginx
-
-# Install fail2ban
-apt-get install -y fail2ban
-systemctl enable fail2ban
-systemctl start fail2ban
-
-echo -e "${GREEN}Dependencies installed successfully!${NC}"
-SETUP01
-
-    cat > $INSTALL_DIR/setup/02-directory-structure.sh << 'SETUP02'
-#!/bin/bash
-
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-NC='\033[0m'
-
-echo -e "${GREEN}Creating directory structure...${NC}"
-
-# Create web directories
-mkdir -p /var/www
-mkdir -p /var/backups/sites
-mkdir -p /var/log/sites
-
-# Create nginx directories
-mkdir -p /etc/nginx/sites-available
-mkdir -p /etc/nginx/sites-enabled
-mkdir -p /etc/nginx/ssl
-
-# Set permissions
-chmod 755 /var/www
-chmod 755 /var/backups
-chmod 755 /var/log/sites
-
-echo -e "${GREEN}Directory structure created!${NC}"
-SETUP02
-
-    # Copy all other scripts from the first artifact
-    # This is where you'd copy all the PHP, Node, Database, Nginx, Sites, and Utils scripts
-    # For brevity, I'll show the structure but you need to paste the actual scripts
+if ! id "$ADMIN_USER" &>/dev/null; then
+    adduser --gecos "" --disabled-password $ADMIN_USER
+    echo "$ADMIN_USER:$ADMIN_PASSWORD" | chpasswd
+    usermod -aG sudo $ADMIN_USER
     
-    echo -e "${YELLOW}Note: You need to copy all the scripts from the first artifact to:${NC}"
-    echo "- PHP scripts to $INSTALL_DIR/php/"
-    echo "- Node scripts to $INSTALL_DIR/node/"
-    echo "- Database scripts to $INSTALL_DIR/database/"
-    echo "- Nginx scripts and templates to $INSTALL_DIR/nginx/"
-    echo "- Site management scripts to $INSTALL_DIR/sites/"
-    echo "- Utility scripts to $INSTALL_DIR/utils/"
-    echo "- Config templates to $INSTALL_DIR/config/templates/"
-    
-    # Create the enhanced vps-manager script
-    cat > $INSTALL_DIR/vps-manager.sh << 'VPSMANAGER'
+    # Copy SSH keys if they exist
+    if [ -d /root/.ssh ] && [ -f /root/.ssh/authorized_keys ]; then
+        mkdir -p /home/$ADMIN_USER/.ssh
+        cp /root/.ssh/authorized_keys /home/$ADMIN_USER/.ssh/
+        chown -R $ADMIN_USER:$ADMIN_USER /home/$ADMIN_USER/.ssh
+        chmod 700 /home/$ADMIN_USER/.ssh
+        chmod 600 /home/$ADMIN_USER/.ssh/authorized_keys
+    fi
+fi
+
+# Setup SSH security
+echo -e "${YELLOW}Configuring SSH security...${NC}"
+sed -i 's/PermitRootLogin yes/PermitRootLogin no/' /etc/ssh/sshd_config
+sed -i 's/#PasswordAuthentication yes/PasswordAuthentication no/' /etc/ssh/sshd_config
+sed -i 's/#PubkeyAuthentication yes/PubkeyAuthentication yes/' /etc/ssh/sshd_config
+systemctl restart sshd
+
+# ===========================================
+# INSTALL CONFIGURATION
+# ===========================================
+echo -e "${GREEN}Setting up VPS Manager configuration...${NC}"
+
+# Create directories
+mkdir -p /etc/vps-manager/configs
+mkdir -p /var/log/vps-manager
+
+# Set ownership and permissions
+chown -R root:root /usr/local/bin
+chmod -R 755 /usr/local/bin
+chmod -R 700 /etc/vps-manager
+
+# Configure sudo permissions
+echo -e "${YELLOW}Configuring sudo permissions...${NC}"
+cat > /etc/sudoers.d/vps-manager << EOF
+# VPS Manager sudo configuration
+$ADMIN_USER ALL=(ALL) NOPASSWD: /usr/local/bin/vps-manager
+$ADMIN_USER ALL=(ALL) NOPASSWD: /usr/local/bin/setup/*
+$ADMIN_USER ALL=(ALL) NOPASSWD: /usr/local/bin/php/*
+$ADMIN_USER ALL=(ALL) NOPASSWD: /usr/local/bin/node/*
+$ADMIN_USER ALL=(ALL) NOPASSWD: /usr/local/bin/database/*
+$ADMIN_USER ALL=(ALL) NOPASSWD: /usr/local/bin/nginx/*
+$ADMIN_USER ALL=(ALL) NOPASSWD: /usr/local/bin/sites/*
+$ADMIN_USER ALL=(ALL) NOPASSWD: /usr/local/bin/utils/*
+$ADMIN_USER ALL=(ALL) NOPASSWD: /bin/systemctl restart nginx
+$ADMIN_USER ALL=(ALL) NOPASSWD: /bin/systemctl reload nginx
+$ADMIN_USER ALL=(ALL) NOPASSWD: /bin/systemctl restart php*-fpm
+$ADMIN_USER ALL=(ALL) NOPASSWD: /bin/systemctl reload php*-fpm
+$ADMIN_USER ALL=(ALL) NOPASSWD: /usr/bin/supervisorctl *
+$ADMIN_USER ALL=(ALL) NOPASSWD: /usr/bin/certbot *
+$ADMIN_USER ALL=(ALL) NOPASSWD: /usr/bin/mysql
+$ADMIN_USER ALL=(ALL) NOPASSWD: /usr/bin/mysqldump
+$ADMIN_USER ALL=(ALL) NOPASSWD: /usr/bin/psql
+$ADMIN_USER ALL=(ALL) NOPASSWD: /usr/bin/pg_dump
+$ADMIN_USER ALL=(ALL) NOPASSWD: /usr/sbin/nginx
+$ADMIN_USER ALL=(ALL) NOPASSWD: /usr/bin/pm2 *
+EOF
+
+chmod 440 /etc/sudoers.d/vps-manager
+
+# ===========================================
+# CREATE VPS-MANAGER-WRAPPER
+# ===========================================
+echo -e "${GREEN}Creating VPS Manager wrapper...${NC}"
+
+cat > /usr/local/bin/vps-manager-wrapper << 'WRAPPER'
+#!/bin/bash
+# This wrapper ensures certain commands run with proper privileges
+
+COMMAND=$1
+shift
+
+case "$COMMAND" in
+    create-site|remove-site|backup-site|deploy|ssl-setup|update-perms)
+        sudo /usr/local/bin/vps-manager "$COMMAND" "$@"
+        ;;
+    list-sites|site-info)
+        # These don't need sudo
+        /usr/local/bin/vps-manager "$COMMAND" "$@"
+        ;;
+    *)
+        /usr/local/bin/vps-manager "$@"
+        ;;
+esac
+WRAPPER
+
+chmod +x /usr/local/bin/vps-manager-wrapper
+
+# ===========================================
+# CREATE ENHANCED VPS-MANAGER
+# ===========================================
+echo -e "${GREEN}Creating enhanced VPS Manager...${NC}"
+
+cat > /usr/local/bin/vps-manager << 'VPSMANAGER'
 #!/bin/bash
 
 SCRIPT_DIR="/usr/local/bin"
@@ -490,30 +450,14 @@ case "$COMMAND" in
 esac
 VPSMANAGER
 
-    # Create wrapper script
-    cat > $INSTALL_DIR/vps-manager-wrapper << 'WRAPPER'
-#!/bin/bash
-# This wrapper ensures certain commands run with proper privileges
+chmod +x /usr/local/bin/vps-manager
 
-COMMAND=$1
-shift
+# ===========================================
+# CREATE SECURITY AUDIT SCRIPT
+# ===========================================
+echo -e "${GREEN}Creating security audit script...${NC}"
 
-case "$COMMAND" in
-    create-site|remove-site|backup-site|deploy|ssl-setup|update-perms)
-        sudo /usr/local/bin/vps-manager "$COMMAND" "$@"
-        ;;
-    list-sites|site-info)
-        # These don't need sudo
-        /usr/local/bin/vps-manager "$COMMAND" "$@"
-        ;;
-    *)
-        /usr/local/bin/vps-manager "$@"
-        ;;
-esac
-WRAPPER
-
-    # Create security audit script
-    cat > $INSTALL_DIR/utils/security-audit.sh << 'SECAUDIT'
+cat > /usr/local/bin/utils/security-audit.sh << 'SECAUDIT'
 #!/bin/bash
 # security-audit.sh - Run periodic security checks
 
@@ -557,106 +501,65 @@ echo "Security updates available:"
 apt list --upgradable 2>/dev/null | grep -i security
 SECAUDIT
 
-    # Set permissions
-    chmod -R 755 $INSTALL_DIR
-    chmod +x $INSTALL_DIR/**/*.sh
-    chmod +x $INSTALL_DIR/vps-manager-wrapper
-    chmod 700 $CONFIG_DIR
-    chmod 755 $LOG_DIR
-}
+chmod +x /usr/local/bin/utils/security-audit.sh
 
-# Main installation process
-echo -e "${GREEN}Starting VPS Manager installation...${NC}"
+# ===========================================
+# CREATE ROOT SETUP SCRIPT
+# ===========================================
+echo -e "${GREEN}Creating root setup script...${NC}"
 
-# Create scripts
-create_scripts
+cat > /usr/local/bin/root-setup.sh << 'ROOTSETUP'
+#!/bin/bash
+
+# This script runs the initial setup as root
+# It's called automatically by the installer
+
+echo "Running root setup tasks..."
+
+# Ensure all scripts are executable
+find /usr/local/bin -type f -name "*.sh" -exec chmod +x {} \;
 
 # Create symlinks
-ln -sf $INSTALL_DIR/vps-manager.sh /usr/bin/vps-manager
-ln -sf $INSTALL_DIR/vps-manager-wrapper /usr/bin/vps-manager-user
-
-# Run initial system setup
-echo -e "${GREEN}Running initial system setup...${NC}"
-$INSTALL_DIR/setup/00-initial-setup.sh "$TIMEZONE"
-$INSTALL_DIR/setup/01-install-dependencies.sh
-$INSTALL_DIR/setup/02-directory-structure.sh
-
-# Create admin user
-echo -e "${GREEN}Creating admin user...${NC}"
-ADMIN_PASSWORD=$(openssl rand -base64 32)
-
-if ! id "$ADMIN_USER" &>/dev/null; then
-    useradd -m -s /bin/bash "$ADMIN_USER"
-    echo "$ADMIN_USER:$ADMIN_PASSWORD" | chpasswd
-    usermod -aG sudo "$ADMIN_USER"
-    
-    # Copy SSH keys if they exist
-    if [ -d /root/.ssh ] && [ -f /root/.ssh/authorized_keys ]; then
-        mkdir -p /home/$ADMIN_USER/.ssh
-        cp /root/.ssh/authorized_keys /home/$ADMIN_USER/.ssh/
-        chown -R $ADMIN_USER:$ADMIN_USER /home/$ADMIN_USER/.ssh
-        chmod 700 /home/$ADMIN_USER/.ssh
-        chmod 600 /home/$ADMIN_USER/.ssh/authorized_keys
-    fi
-fi
-
-# Configure sudo permissions
-cat > /etc/sudoers.d/vps-manager << EOF
-# VPS Manager sudo configuration
-$ADMIN_USER ALL=(ALL) NOPASSWD: /usr/local/bin/vps-manager
-$ADMIN_USER ALL=(ALL) NOPASSWD: /usr/local/bin/setup/*
-$ADMIN_USER ALL=(ALL) NOPASSWD: /usr/local/bin/php/*
-$ADMIN_USER ALL=(ALL) NOPASSWD: /usr/local/bin/node/*
-$ADMIN_USER ALL=(ALL) NOPASSWD: /usr/local/bin/database/*
-$ADMIN_USER ALL=(ALL) NOPASSWD: /usr/local/bin/nginx/*
-$ADMIN_USER ALL=(ALL) NOPASSWD: /usr/local/bin/sites/*
-$ADMIN_USER ALL=(ALL) NOPASSWD: /usr/local/bin/utils/*
-$ADMIN_USER ALL=(ALL) NOPASSWD: /bin/systemctl restart nginx
-$ADMIN_USER ALL=(ALL) NOPASSWD: /bin/systemctl reload nginx
-$ADMIN_USER ALL=(ALL) NOPASSWD: /bin/systemctl restart php*-fpm
-$ADMIN_USER ALL=(ALL) NOPASSWD: /bin/systemctl reload php*-fpm
-$ADMIN_USER ALL=(ALL) NOPASSWD: /usr/bin/supervisorctl *
-$ADMIN_USER ALL=(ALL) NOPASSWD: /usr/bin/certbot *
-$ADMIN_USER ALL=(ALL) NOPASSWD: /usr/bin/mysql
-$ADMIN_USER ALL=(ALL) NOPASSWD: /usr/bin/mysqldump
-$ADMIN_USER ALL=(ALL) NOPASSWD: /usr/bin/psql
-$ADMIN_USER ALL=(ALL) NOPASSWD: /usr/bin/pg_dump
-$ADMIN_USER ALL=(ALL) NOPASSWD: /usr/sbin/nginx
-$ADMIN_USER ALL=(ALL) NOPASSWD: /usr/bin/pm2 *
-EOF
-
-chmod 440 /etc/sudoers.d/vps-manager
+ln -sf /usr/local/bin/vps-manager /usr/bin/vps-manager
+ln -sf /usr/local/bin/vps-manager-wrapper /usr/bin/vps-manager-user
 
 # Add alias for regular users
 echo 'alias vps-manager="/usr/local/bin/vps-manager-wrapper"' >> /etc/bash.bashrc
 
-# Install software stack
-echo -e "${GREEN}Installing software stack...${NC}"
+# Initialize log file
+touch /var/log/vps-manager/vps-manager.log
+chmod 666 /var/log/vps-manager/vps-manager.log
 
-# PHP
-echo -e "${YELLOW}Installing PHP versions...${NC}"
-$INSTALL_DIR/php/install-php-versions.sh
+echo "Root setup completed"
+ROOTSETUP
 
-# Node.js and pnpm
-echo -e "${YELLOW}Installing Node.js tools...${NC}"
-$INSTALL_DIR/node/install-pnpm.sh
-source /etc/profile
-$INSTALL_DIR/node/install-pm2.sh
+chmod +x /usr/local/bin/root-setup.sh
 
-# Nginx
-echo -e "${YELLOW}Installing Nginx...${NC}"
-$INSTALL_DIR/nginx/install-nginx.sh
+# ===========================================
+# FINAL SETUP
+# ===========================================
+echo -e "${GREEN}Running final setup...${NC}"
 
-# Databases
-echo -e "${YELLOW}Installing MySQL...${NC}"
-$INSTALL_DIR/database/install-mysql.sh "$MYSQL_ROOT_PASSWORD"
+# Run root setup
+/usr/local/bin/root-setup.sh
 
-echo -e "${YELLOW}Installing PostgreSQL...${NC}"
-$INSTALL_DIR/database/install-postgresql.sh "$POSTGRES_PASSWORD"
+# Create initial log entry
+echo "[$(date '+%Y-%m-%d %H:%M:%S')] VPS Manager security installed by root" > /var/log/vps-manager/vps-manager.log
 
-# Configure fail2ban
-echo -e "${YELLOW}Configuring fail2ban...${NC}"
-cat > /etc/fail2ban/jail.local << EOF
+# Save installation info
+cat > /etc/vps-manager/installation-info.json << EOF
+{
+    "installed_date": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+    "admin_user": "$ADMIN_USER",
+    "timezone": "$TIMEZONE",
+    "security_configured": true
+}
+EOF
+
+# Configure fail2ban if installed
+if command -v fail2ban-client &> /dev/null; then
+    echo -e "${YELLOW}Configuring fail2ban...${NC}"
+    cat > /etc/fail2ban/jail.local << 'F2B'
 [sshd]
 enabled = true
 port = 22
@@ -672,44 +575,16 @@ port = http,https
 logpath = /var/log/nginx/*error.log
 maxretry = 10
 bantime = 3600
-EOF
+F2B
+    systemctl restart fail2ban
+fi
 
-systemctl restart fail2ban
-
-# Setup monitoring
-echo -e "${YELLOW}Setting up monitoring...${NC}"
-$INSTALL_DIR/utils/monitor-setup.sh
-
-# Secure SSH
-echo -e "${YELLOW}Securing SSH...${NC}"
-sed -i 's/#PermitRootLogin yes/PermitRootLogin no/' /etc/ssh/sshd_config
-sed -i 's/#PasswordAuthentication yes/PasswordAuthentication no/' /etc/ssh/sshd_config
-sed -i 's/#PubkeyAuthentication yes/PubkeyAuthentication yes/' /etc/ssh/sshd_config
-systemctl restart sshd
-
-# Create initial log entry
-echo "[$(date '+%Y-%m-%d %H:%M:%S')] VPS Manager installed by root" > $LOG_DIR/vps-manager.log
-chown $ADMIN_USER:$ADMIN_USER $LOG_DIR/vps-manager.log
-
-# Save installation info
-cat > $CONFIG_DIR/installation-info.json << EOF
-{
-    "installed_date": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
-    "admin_user": "$ADMIN_USER",
-    "admin_email": "$ADMIN_EMAIL",
-    "timezone": "$TIMEZONE",
-    "mysql_installed": true,
-    "postgresql_installed": true,
-    "php_versions": ["7.4", "8.0", "8.1", "8.2", "8.3"],
-    "node_tool": "pnpm",
-    "process_manager": "pm2"
-}
-EOF
-
-# Final summary
+# ===========================================
+# COMPLETION
+# ===========================================
 echo ""
 echo -e "${GREEN}================================${NC}"
-echo -e "${GREEN}Installation completed!${NC}"
+echo -e "${GREEN}Security Installation Complete!${NC}"
 echo -e "${GREEN}================================${NC}"
 echo ""
 echo -e "${YELLOW}Admin User:${NC} $ADMIN_USER"
@@ -717,15 +592,24 @@ echo -e "${YELLOW}Admin Password:${NC} $ADMIN_PASSWORD"
 echo ""
 echo -e "${RED}IMPORTANT: Save these credentials and change the password immediately!${NC}"
 echo ""
+echo "Security configurations applied:"
+echo "✓ Root SSH login disabled"
+echo "✓ Password authentication disabled (SSH keys only)"
+echo "✓ UFW firewall enabled (ports 22, 80, 443)"
+echo "✓ Admin user created with sudo access"
+echo "✓ VPS Manager scripts configured"
+echo ""
 echo "Next steps:"
 echo "1. Log out and log back in as $ADMIN_USER"
 echo "2. Change your password: passwd"
-echo "3. Create your first site: vps-manager create-site"
+echo "3. Run system setup: sudo /usr/local/bin/setup/00-initial-setup.sh"
+echo "4. Install dependencies: sudo /usr/local/bin/setup/01-install-dependencies.sh"
+echo "5. Create directory structure: sudo /usr/local/bin/setup/02-directory-structure.sh"
 echo ""
-echo "Security notes:"
-echo "- Root login has been disabled"
-echo "- Password authentication has been disabled (SSH keys only)"
-echo "- Firewall is active (ports 22, 80, 443 open)"
-echo "- Fail2ban is monitoring for intrusion attempts"
+echo "Then install your stack components as needed:"
+echo "- PHP: sudo /usr/local/bin/php/install-php-versions.sh"
+echo "- Node: sudo /usr/local/bin/node/install-pnpm.sh"
+echo "- Nginx: sudo /usr/local/bin/nginx/install-nginx.sh"
+echo "- MySQL: sudo /usr/local/bin/database/install-mysql.sh <password>"
 echo ""
-echo "Run 'vps-manager' for help on managing sites"
+echo "Run 'vps-manager' for site management after setup"
