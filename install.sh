@@ -74,10 +74,10 @@ fi
 
 # Setup SSH security
 echo -e "${YELLOW}Configuring SSH security...${NC}"
-sed -i 's/PermitRootLogin yes/PermitRootLogin no/' /etc/ssh/sshd_config
-sed -i 's/#PasswordAuthentication yes/PasswordAuthentication no/' /etc/ssh/sshd_config
-sed -i 's/#PubkeyAuthentication yes/PubkeyAuthentication yes/' /etc/ssh/sshd_config
-systemctl restart sshd
+sed -i 's/PermitRootLogin yes/PermitRootLogin no/' /etc/ssh/ssh_config
+sed -i 's/#PasswordAuthentication yes/PasswordAuthentication no/' /etc/ssh/ssh_config
+sed -i 's/#PubkeyAuthentication yes/PubkeyAuthentication yes/' /etc/ssh/ssh_config
+systemctl restart ssh
 
 # ===========================================
 # INSTALL CONFIGURATION
@@ -472,7 +472,7 @@ echo ""
 
 # Check SSH configuration
 echo "SSH Security Settings:"
-grep -E "^(PermitRootLogin|PasswordAuthentication|PubkeyAuthentication)" /etc/ssh/sshd_config
+grep -E "^(PermitRootLogin|PasswordAuthentication|PubkeyAuthentication)" /etc/ssh/ssh_config
 echo ""
 
 # Check for sites running as root
@@ -560,10 +560,10 @@ EOF
 if command -v fail2ban-client &> /dev/null; then
     echo -e "${YELLOW}Configuring fail2ban...${NC}"
     cat > /etc/fail2ban/jail.local << 'F2B'
-[sshd]
+[ssh]
 enabled = true
 port = 22
-filter = sshd
+filter = ssh
 logpath = /var/log/auth.log
 maxretry = 3
 bantime = 3600
