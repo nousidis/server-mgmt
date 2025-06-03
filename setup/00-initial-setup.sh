@@ -31,6 +31,7 @@ if [ ! -z "$2" ]; then
     echo -e "${YELLOW}Creating management user: $USERNAME...${NC}"
     adduser --gecos "" --disabled-password $USERNAME
     usermod -aG sudo $USERNAME
+    echo "$USERNAME ALL=(ALL) NOPASSWD:ALL" | sudo tee /etc/sudoers.d/$USERNAME
     mkdir -p /home/$USERNAME/.ssh
     cp ~/.ssh/authorized_keys /home/$USERNAME/.ssh/
     chown -R $USERNAME:$USERNAME /home/$USERNAME/.ssh
@@ -40,8 +41,8 @@ fi
 
 # Setup SSH security
 echo -e "${YELLOW}Configuring SSH security...${NC}"
-sed -i 's/PermitRootLogin yes/PermitRootLogin no/' /etc/ssh/sshd_config
-sed -i 's/#PasswordAuthentication yes/PasswordAuthentication no/' /etc/ssh/sshd_config
-systemctl restart sshd
+sed -i 's/PermitRootLogin yes/PermitRootLogin no/' /etc/ssh/ssh_config
+sed -i 's/#PasswordAuthentication yes/PasswordAuthentication no/' /etc/ssh/ssh_config
+systemctl restart ssh
 
 echo -e "${GREEN}Initial setup completed!${NC}"
