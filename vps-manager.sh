@@ -13,7 +13,6 @@ NC='\033[0m'
 # Error handling
 set -euo pipefail
 trap 'echo -e "${RED}Error occurred at line $LINENO${NC}"' ERR
-
 # Logging function
 log() {
     echo "[$(date +'%Y-%m-%d %H:%M:%S')] $1" >> /var/log/vps-manager.log
@@ -22,7 +21,14 @@ log() {
 # Validation functions
 validate_domain() {
     local domain=$1
-    if [[ ! "$domain" =~ ^[a-zA-Z0-9][a-zA-Z0-9-]{0,61}[a-zA-Z0-9]\.[a-zA-Z]{2,}$ ]]; then
+
+    # This regex supports:
+    # - Multiple subdomain levels (test.appalachian.digital)
+    # - Domain names with hyphens (my-site.com)
+    # - Multi-level TLDs (.co.uk, .com.au)
+    # - Single level domains (example.com)
+
+    if [[ ! "$domain" =~ ^([a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}$ ]]; then
         echo -e "${RED}Invalid domain format: $domain${NC}"
         return 1
     fi
