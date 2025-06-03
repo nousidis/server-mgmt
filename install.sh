@@ -19,7 +19,7 @@ touch /var/log/vps-manager.log
 
 # Copy scripts to system location
 cp -r ./* /usr/local/bin/
-chmod +x /usr/local/bin/**/*.sh
+find /usr/local/bin -type f -exec chmod +x {} \;
 
 # Create the wrapper script for sudo handling
 cat > /usr/bin/vps-manager << 'EOF'
