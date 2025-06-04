@@ -16,7 +16,7 @@ if [ -z "$DOMAIN" ] || [ -z "$FRAMEWORK" ]; then
 fi
 
 # Set defaults
-PHP_VERSION=${PHP_VERSION:-"8.2"}
+PHP_VERSION=${PHP_VERSION:-"8.3"}
 DB_TYPE=${DB_TYPE:-"none"}
 
 # Create safe username (replace dots and special chars)
@@ -44,6 +44,32 @@ create_directory "/var/www/$DOMAIN" "$USER"
 create_directory "/var/log/sites/$DOMAIN" "$USER"
 create_directory "/home/$USER/.ssh" "$USER"
 chmod 700 "/home/$USER/.ssh"
+
+# Check if database exists
+case "$DB_TYPE" in
+    mysql)
+        if ! command -v mysql &> /dev/null; then
+            DB_ROOT_PASSWORD=$(openssl rand -base64 32 | tr -d "=+/" | cut -c1-25)
+            if /usr/local/bin/database/install-mysql.sh "$DB_ROOT_PASSWORD"; then
+                echo "MySQL installed successfully"
+            else
+                echo "Failed to install MySQL"
+                exit 1
+            fi
+        fi
+        ;;
+    postgres)
+        if ! command -v psql &> /dev/null; then
+            DB_ROOT_PASSWORD=$(openssl rand -base64 32 | tr -d "=+/" | cut -c1-25)
+            if /usr/local/bin/database/install-postgres.sh "$DB_ROOT_PASSWORD"; then
+                echo "PostgreSQL installed successfully"
+            else
+                echo "Failed to install PostgreSQL"
+                exit 1
+            fi
+        fi
+        ;;
+esac
 
 # Create database if needed
 if [ "$DB_TYPE" != "none" ]; then

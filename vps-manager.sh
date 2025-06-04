@@ -13,9 +13,35 @@ NC='\033[0m'
 # Error handling
 set -euo pipefail
 trap 'echo -e "${RED}Error occurred at line $LINENO${NC}"' ERR
+
 # Logging function
 log() {
     echo "[$(date +'%Y-%m-%d %H:%M:%S')] $1" >> /var/log/vps-manager.log
+}
+
+# Show help function
+show_help() {
+    echo -e "${BLUE}VPS Manager - Multi-Site Management System${NC}"
+    echo ""
+    echo "Usage: vps-manager <command> [options]"
+    echo ""
+    echo "Commands:"
+    echo "  create-site    Create a new website"
+    echo "  remove-site    Remove an existing website"
+    echo "  list-sites     List all configured sites"
+    echo "  backup-site    Backup a website"
+    echo "  deploy         Deploy application to site"
+    echo "  site-info      Show detailed site information"
+    echo "  ssl-setup      Setup SSL certificate for a site"
+    echo "  update-perms   Update site permissions"
+    echo ""
+    echo "Examples:"
+    echo "  vps-manager create-site"
+    echo "  vps-manager create-site example.com laravel 8.2 mysql"
+    echo "  vps-manager deploy example.com https://github.com/user/repo.git"
+    echo "  vps-manager backup-site example.com"
+    echo "  vps-manager ssl-setup example.com admin@example.com"
+    echo "  vps-manager remove-site example.com"
 }
 
 # Validation functions

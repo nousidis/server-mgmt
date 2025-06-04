@@ -46,5 +46,7 @@ fi
 /usr/local/bin/setup/01-install-dependencies.sh
 /usr/local/bin/setup/02-directory-structure.sh
 
+chmod +x /usr/local/bin/vps-manager*.sh
+
 echo "VPS Manager installation completed!"
 echo "You can now use 'vps-manager' command (it will automatically handle sudo)"
