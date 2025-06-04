@@ -4,7 +4,7 @@
 # This script integrates all functionality into a unified command interface
 
 # Source the core functions
-source /usr/local/bin/vps-manager-core.sh
+source "$(dirname "$0")/vps-manager-core.sh"
 
 # ===== SITE MANAGEMENT FUNCTIONS =====
 
@@ -62,8 +62,8 @@ site_create() {
         php_version=$(get_opt "php" "${ARGS[3]:-}")
         if [ -z "$php_version" ]; then
             while true; do
-                read -p "PHP version (7.4/8.0/8.1/8.2/8.3) [8.2]: " php_version
-                php_version=${php_version:-"8.2"}
+                read -p "PHP version (7.4/8.0/8.1/8.2/8.3) [8.3]: " php_version
+                php_version=${php_version:-"8.3"}
                 if validate_php_version "$php_version"; then
                     break
                 else

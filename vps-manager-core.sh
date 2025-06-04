@@ -8,14 +8,15 @@ set -euo pipefail
 
 # Constants
 export VPS_MANAGER_VERSION="1.0.0"
-export SCRIPT_DIR="/usr/local/bin"
-export CONFIG_DIR="/etc/vps-manager"
-export LOG_FILE="/var/log/vps-manager.log"
-export BACKUP_DIR="/var/backups/sites"
+export SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+export CONFIG_DIR="$SCRIPT_DIR/config"
+export LOG_FILE="$SCRIPT_DIR/logs/vps-manager.log"
+export BACKUP_DIR="$SCRIPT_DIR/backups"
 
 # Ensure required directories exist
 mkdir -p "$CONFIG_DIR/configs"
 mkdir -p "$BACKUP_DIR"
+mkdir -p "$(dirname "$LOG_FILE")"
 touch "$LOG_FILE"
 
 # Colors for terminal output
