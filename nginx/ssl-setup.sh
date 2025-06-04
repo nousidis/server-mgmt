@@ -1,4 +1,5 @@
 #!/bin/bash
+set -euo pipefail
 
 DOMAIN=$1
 EMAIL=$2
@@ -12,6 +13,6 @@ fi
 certbot --nginx -d $DOMAIN -d www.$DOMAIN --non-interactive --agree-tos -m $EMAIL
 
 # Setup auto-renewal
-echo "0 2 * * * /usr/bin/certbot renew --quiet" | crontab -
+(crontab -l 2>/dev/null; echo "0 2 * * * /usr/bin/certbot renew --quiet") | crontab -
 
 echo "SSL certificate installed for $DOMAIN"

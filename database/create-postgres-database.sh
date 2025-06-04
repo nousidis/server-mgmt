@@ -1,4 +1,5 @@
 #!/bin/bash
+set -euo pipefail
 
 DB_NAME=$1
 DB_USER=$2

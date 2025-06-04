@@ -1,4 +1,5 @@
 #!/bin/bash
+set -euo pipefail
 
 DOMAIN=$1
 NODE_VERSION=$2

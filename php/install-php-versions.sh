@@ -1,4 +1,5 @@
 #!/bin/bash
+set -euo pipefail
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -17,7 +18,7 @@ apt-get update
 # Install each PHP version with common extensions
 for VERSION in "${PHP_VERSIONS[@]}"; do
     echo -e "${YELLOW}Installing PHP $VERSION...${NC}"
-    
+
     apt-get install -y \
         php$VERSION-fpm \
         php$VERSION-cli \
@@ -38,7 +39,7 @@ for VERSION in "${PHP_VERSIONS[@]}"; do
         php$VERSION-redis \
         php$VERSION-memcached \
         php$VERSION-imagick
-    
+
     # Start and enable PHP-FPM
     systemctl enable php$VERSION-fpm
     systemctl start php$VERSION-fpm
