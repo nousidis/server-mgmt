@@ -97,7 +97,16 @@ validate_framework() {
     local framework=$1
     local valid_frameworks=("laravel" "php" "nextjs" "sveltekit" "static")
 
-    if [[ ! " ${valid_frameworks[@]} " =~ " ${framework} " ]]; then
+    # Use a loop to check each framework individually
+    local is_valid=0
+    for valid_framework in "${valid_frameworks[@]}"; do
+        if [[ "$framework" == "$valid_framework" ]]; then
+            is_valid=1
+            break
+        fi
+    done
+
+    if [[ $is_valid -eq 0 ]]; then
         return 1
     fi
 
@@ -109,7 +118,16 @@ validate_php_version() {
     local version=$1
     local valid_versions=("7.4" "8.0" "8.1" "8.2" "8.3")
 
-    if [[ ! " ${valid_versions[@]} " =~ " ${version} " ]]; then
+    # Use a loop to check each version individually
+    local is_valid=0
+    for valid_version in "${valid_versions[@]}"; do
+        if [[ "$version" == "$valid_version" ]]; then
+            is_valid=1
+            break
+        fi
+    done
+
+    if [[ $is_valid -eq 0 ]]; then
         return 1
     fi
 
@@ -121,7 +139,16 @@ validate_db_type() {
     local db_type=$1
     local valid_types=("mysql" "postgres" "none")
 
-    if [[ ! " ${valid_types[@]} " =~ " ${db_type} " ]]; then
+    # Use a loop to check each database type individually
+    local is_valid=0
+    for valid_type in "${valid_types[@]}"; do
+        if [[ "$db_type" == "$valid_type" ]]; then
+            is_valid=1
+            break
+        fi
+    done
+
+    if [[ $is_valid -eq 0 ]]; then
         return 1
     fi
 
@@ -132,7 +159,8 @@ validate_db_type() {
 validate_url() {
     local url=$1
 
-    if [[ ! "$url" =~ ^(https?|git)://[a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?)*(/[a-zA-Z0-9\-\._~:/?#\[\]@!\$&'\(\)\*\+,;=]*)?$ ]]; then
+    # Simplified regex pattern that checks if URL starts with http://, https://, or git://
+    if [[ ! "$url" =~ ^(https?|git):// ]]; then
         return 1
     fi
 
